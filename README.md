@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Asara Beach Cottages - Booking Website
 
 A beautiful, modern cottage booking website with beach/sea vibes, featuring a responsive design and interactive elements.
@@ -168,3 +169,6 @@ Potential features to add:
 ---
 
 **Built with ❤️ for the perfect beach getaway experience**
+=======
+# Asara-web
+>>>>>>> 11ecf907a2747a75e6d23862f4741c13c273c694
