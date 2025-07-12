@@ -10,7 +10,7 @@ class BookingRequest extends Model
     use HasFactory;
 
     protected $fillable = [
-        'customer_id', 'checkin', 'checkout', 'guests', 'notes', 'status',
+        'customer_id', 'cottage_id', 'checkin', 'checkout', 'guests', 'notes', 'status',
     ];
 
     public function customer()

@@ -9,6 +9,8 @@ use App\Models\Review;
 use Illuminate\Support\Facades\DB;
 use App\Models\Customer;
 use App\Models\BookingRequest;
+use App\Models\BlockedDate;
+use App\Models\SpecialPrice;
 
 class AdminController extends Controller
 {
@@ -231,6 +233,7 @@ class AdminController extends Controller
 
         BookingRequest::create([
             'customer_id' => $customer->id,
+            'cottage_id' => $request->cottage_id, // Add this line
             'checkin' => $request->checkin,
             'checkout' => $request->checkout,
             'guests' => $request->guests,
@@ -445,5 +448,113 @@ class AdminController extends Controller
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'حدث خطأ أثناء حذف العميل'], 500);
         }
+    }
+
+    /**
+     * Get unavailable dates (booked + blocked) for a given cottage
+     */
+    public function getUnavailableDates($cottageId)
+    {
+        // Get all booking requests for this cottage
+        $bookings = BookingRequest::where('cottage_id', $cottageId)->get(['checkin', 'checkout']);
+        $unavailable = [];
+        foreach ($bookings as $booking) {
+            $start = new \DateTime($booking->checkin);
+            $end = new \DateTime($booking->checkout);
+            while ($start <= $end) {
+                $unavailable[] = $start->format('Y-m-d');
+                $start->modify('+1 day');
+            }
+        }
+        // Get all blocked dates for this cottage
+        $blocked = BlockedDate::where('cottage_id', $cottageId)->pluck('date')->toArray();
+        $unavailable = array_unique(array_merge($unavailable, $blocked));
+        return response()->json(array_values($unavailable));
+    }
+
+    /**
+     * Get blocked dates only for a given cottage
+     */
+    public function getBlockedDates($cottageId)
+    {
+        $blocked = BlockedDate::where('cottage_id', $cottageId)->pluck('date')->toArray();
+        return response()->json(array_values($blocked));
+    }
+
+    /**
+     * Add a blocked date for a cottage
+     */
+    public function addBlockedDate(Request $request)
+    {
+        $request->validate([
+            'cottage_id' => 'required|exists:cottages,id',
+            'dates' => 'required|array|min:1',
+            'dates.*' => 'required|date',
+        ]);
+        $success = true;
+        foreach ($request->dates as $date) {
+            $exists = BlockedDate::where('cottage_id', $request->cottage_id)
+                ->where('date', $date)
+                ->exists();
+            if (!$exists) {
+                BlockedDate::create([
+                    'cottage_id' => $request->cottage_id,
+                    'date' => $date,
+                    'created_by' => auth()->id() ?? null,
+                ]);
+            }
+        }
+        return response()->json(['success' => $success]);
+    }
+
+    /**
+     * Remove a blocked date for a cottage
+     */
+    public function removeBlockedDate($cottageId, $date)
+    {
+        $deleted = BlockedDate::where('cottage_id', $cottageId)
+            ->where('date', $date)
+            ->delete();
+        return response()->json(['success' => $deleted > 0]);
+    }
+
+    /**
+     * Get special prices for a given cottage
+     */
+    public function getSpecialPrices($cottageId)
+    {
+        $specials = SpecialPrice::where('cottage_id', $cottageId)->get(['date', 'price']);
+        return response()->json($specials);
+    }
+
+    /**
+     * Add special prices for a cottage (dates[] and price)
+     */
+    public function addSpecialPrice(Request $request)
+    {
+        $request->validate([
+            'cottage_id' => 'required|exists:cottages,id',
+            'dates' => 'required|array|min:1',
+            'dates.*' => 'required|date',
+            'price' => 'required|numeric|min:0',
+        ]);
+        foreach ($request->dates as $date) {
+            SpecialPrice::updateOrCreate(
+                ['cottage_id' => $request->cottage_id, 'date' => $date],
+                ['price' => $request->price]
+            );
+        }
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Remove a special price for a cottage on a specific date
+     */
+    public function removeSpecialPrice($cottageId, $date)
+    {
+        $deleted = SpecialPrice::where('cottage_id', $cottageId)
+            ->where('date', $date)
+            ->delete();
+        return response()->json(['success' => $deleted > 0]);
     }
 } 

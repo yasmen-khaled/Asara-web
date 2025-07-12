@@ -632,7 +632,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Booking Modal Functions
-function openBookingModal(cottageName, cottageId) {
+window.openBookingModal = function(cottageName, cottageId, cottagePrice) {
     const modal = document.getElementById('bookingModal');
     if (!modal) return;
 
@@ -641,8 +641,31 @@ function openBookingModal(cottageName, cottageId) {
         cottageTitleElement.textContent = cottageName;
     }
     
-    // Store cottage ID for later use
+    // Store cottage data for later use
     modal.dataset.cottageId = cottageId;
+    modal.dataset.cottagePrice = cottagePrice || 0;
+
+    // Fetch special prices for this cottage
+    window._specialPricesMap = {};
+    fetch(`/api/cottages/${cottageId}/special-prices`)
+        .then(res => res.json())
+        .then(prices => {
+            prices.forEach(item => {
+                window._specialPricesMap[item.date] = parseFloat(item.price);
+            });
+            // After fetching special prices, update calendar and cost
+            if (typeof window._refreshFlatpickrSpecials === 'function') window._refreshFlatpickrSpecials();
+            calculateBookingCost();
+        });
+    
+    // Update price per night display
+    const pricePerNightElement = document.getElementById('pricePerNight');
+    if (pricePerNightElement) {
+        pricePerNightElement.textContent = `${cottagePrice || 0} د.ل`;
+    }
+    
+    // Calculate initial cost
+    calculateBookingCost();
     
     // Show modal
     modal.style.display = 'block';
@@ -669,6 +692,103 @@ function openBookingModal(cottageName, cottageId) {
             modal.style.display = 'none';
         }
     });
+
+    // --- New: Render flatpickr inline calendar in modalCalendar ---
+    const calendarDiv = document.getElementById('modalCalendar');
+    if (calendarDiv && cottageId && window.flatpickr) {
+        // Remove any previous flatpickr instance
+        if (calendarDiv._flatpickr) {
+            calendarDiv._flatpickr.destroy();
+        }
+        fetch(`/api/cottages/${cottageId}/unavailable-dates`)
+            .then(res => res.json())
+            .then(unavailableDates => {
+                const unavailableSet = new Set(unavailableDates);
+                window._selectedRange = null;
+                window._refreshFlatpickrSpecials = function() {
+                    if (!calendarDiv._flatpickr) return;
+                    // Redraw calendar to update special price highlights
+                    calendarDiv._flatpickr.redraw();
+                };
+                flatpickr(calendarDiv, {
+                    mode: 'range',
+                    minDate: 'today',
+                    inline: true,
+                    disable: [function(date) {
+                        const d = formatDateLocal(date);
+                        return unavailableSet.has(d);
+                    }],
+                    onDayCreate: function(dObj, dStr, fp, dayElem) {
+                        const d = formatDateLocal(dayElem.dateObj);
+                        if (unavailableSet.has(d)) {
+                            dayElem.classList.add('blocked-day');
+                        } else {
+                            dayElem.classList.add('available-day');
+                        }
+                        // Highlight special price days
+                        if (window._specialPricesMap && window._specialPricesMap[d] !== undefined) {
+                            dayElem.classList.add('special-price-day');
+                            dayElem.title = 'سعر خاص: ' + window._specialPricesMap[d] + ' د.ل';
+                        }
+                    },
+                    onChange: function(selectedDates, dateStr, instance) {
+                        console.log('Selected dates:', selectedDates); // Debug
+                        window._selectedRange = selectedDates;
+                        calculateBookingCost();
+                    }
+                });
+            });
+    }
+}
+
+// Calculate booking cost based on dates (with special prices)
+function calculateBookingCost() {
+    const modal = document.getElementById('bookingModal');
+    if (!modal) return;
+    const numberOfNightsElement = document.getElementById('numberOfNights');
+    const totalCostElement = document.getElementById('totalCost');
+    const cottagePrice = parseInt(modal.dataset.cottagePrice) || 0;
+    let nights = 0;
+    let totalCost = 0;
+    
+    if (window._selectedRange && window._selectedRange.length > 0) {
+        if (window._selectedRange.length === 1) {
+            // Single day selection - charge for 1 night
+            nights = 1;
+            const selectedDate = window._selectedRange[0];
+            const d = formatDateLocal(selectedDate);
+            if (window._specialPricesMap && window._specialPricesMap[d] !== undefined) {
+                totalCost = window._specialPricesMap[d];
+            } else {
+                totalCost = cottagePrice;
+            }
+        } else if (window._selectedRange.length === 2) {
+            // Range selection - calculate for the range
+            const checkinDate = window._selectedRange[0];
+            const checkoutDate = window._selectedRange[1];
+            nights = Math.ceil((checkoutDate - checkinDate) / (1000 * 60 * 60 * 24));
+            if (nights > 0) {
+                let current = new Date(checkinDate);
+                for (let i = 0; i < nights; i++) {
+                    const d = formatDateLocal(current);
+                    if (window._specialPricesMap && window._specialPricesMap[d] !== undefined) {
+                        totalCost += window._specialPricesMap[d];
+                    } else {
+                        totalCost += cottagePrice;
+                    }
+                    current.setDate(current.getDate() + 1);
+                }
+            }
+        }
+    }
+    
+    if (nights > 0) {
+        numberOfNightsElement.textContent = `${nights} ليلة`;
+        totalCostElement.textContent = `${totalCost} د.ل`;
+    } else {
+        numberOfNightsElement.textContent = '--';
+        totalCostElement.textContent = '-- د.ل';
+    }
 }
 
 // Submit Booking Function
@@ -678,10 +798,24 @@ function submitBooking() {
 
     const name = document.getElementById('modalName')?.value;
     const phone = document.getElementById('modalPhone')?.value;
-    const checkin = document.getElementById('modalCheckIn')?.value;
-    const checkout = document.getElementById('modalCheckOut')?.value;
+    let checkin = '', checkout = '';
+    
+    if (window._selectedRange && window._selectedRange.length > 0) {
+        if (window._selectedRange.length === 1) {
+            // Single day selection - use same date for checkin and checkout
+            const selectedDate = window._selectedRange[0];
+            checkin = selectedDate.toISOString().split('T')[0];
+            checkout = selectedDate.toISOString().split('T')[0];
+        } else if (window._selectedRange.length === 2) {
+            // Range selection - use the range as is
+            checkin = window._selectedRange[0].toISOString().split('T')[0];
+            checkout = window._selectedRange[1].toISOString().split('T')[0];
+        }
+    }
+    
     const guests = document.getElementById('modalGuests')?.value;
     const notes = document.getElementById('modalNotes')?.value;
+    const cottageId = modal.dataset.cottageId; // Get the cottage id
     
     if (!checkin || !checkout || !phone || !name) {
         alert('الرجاء إدخال جميع البيانات المطلوبة');
@@ -715,6 +849,7 @@ function submitBooking() {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
         },
         body: JSON.stringify({
+            cottage_id: cottageId, // Include cottage_id
             name: name,
             phone: phone,
             checkin: checkin,
@@ -727,20 +862,8 @@ function submitBooking() {
     .then(data => {
         if (data.success) {
             // 2. Open WhatsApp with the message
-            const message = `السلام عليكم،
-أود حجز ${cottageName}
-
-الاسم: ${name}
-رقم الهاتف: ${phone}
-موعد الوصول: ${checkinFormatted}
-موعد المغادرة: ${checkoutFormatted}
-عدد الليالي: ${nights}
-عدد الضيوف: ${guests}
-${notes ? `ملاحظات: ${notes}` : ''}
-
-أرجو إخباري بالتوفر والأسعار.
-شكراً لكم!`;
-            
+            const totalCostText = document.getElementById('totalCost')?.textContent || '-- د.ل';
+            const message = `السلام عليكم،\nأود حجز ${cottageName}\n\nالاسم: ${name}\nرقم الهاتف: ${phone}\nموعد الوصول: ${checkinFormatted}\nموعد المغادرة: ${checkoutFormatted}\nعدد الليالي: ${nights}\nعدد الضيوف: ${guests}\n${notes ? `ملاحظات: ${notes}` : ''}\n\nالتكلفة الإجمالية: ${totalCostText}\n\nارجو تأكيد حجزي.\nشكراً لكم!`;
             window.open(`https://wa.me/218918868883?text=${encodeURIComponent(message)}`, '_blank');
             modal.style.display = 'none';
             
@@ -781,6 +904,14 @@ document.addEventListener('DOMContentLoaded', function() {
             if (checkoutInput.value && new Date(checkoutInput.value) <= new Date(this.value)) {
                 checkoutInput.value = '';
             }
+            
+            // Recalculate cost
+            calculateBookingCost();
+        });
+        
+        // Update cost when checkout date changes
+        checkoutInput.addEventListener('change', function() {
+            calculateBookingCost();
         });
     }
 });
@@ -789,3 +920,30 @@ function initializeCalendar() {
     // Initialize FullCalendar here if you're using it
     // This is a placeholder for calendar initialization
 } 
+
+// Add CSS for available-day and blocked-day highlight
+if (typeof window !== 'undefined') {
+    const style = document.createElement('style');
+    style.innerHTML = `.flatpickr-day.available-day { background: #d4f7d4 !important; border-radius: 50% !important; color: #1a7f1a !important; font-weight: bold; }
+.flatpickr-day.blocked-day { background: #f8d7da !important; color: #a71d2a !important; border-radius: 50% !important; font-weight: bold; }`;
+    document.head.appendChild(style);
+} 
+
+// Add CSS for special price highlight
+if (typeof window !== 'undefined') {
+    const style = document.createElement('style');
+    style.innerHTML += `.special-price-day { background: #ffe082 !important; color: #b26a00 !important; border-radius: 50% !important; font-weight: bold; position: relative; }
+.special-price-day::after { content: '\\2605'; position: absolute; top: 2px; right: 2px; font-size: 0.8em; color: #b26a00; }`;
+    document.head.appendChild(style);
+} 
+
+// Helper to format date as YYYY-MM-DD in local time
+function formatDateLocal(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+} 
+
+// Debug: Verify openBookingModal is available globally
+console.log('Script loaded. openBookingModal available:', typeof window.openBookingModal); 

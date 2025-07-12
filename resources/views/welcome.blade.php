@@ -3,7 +3,7 @@
     <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ __('messages.asara_beach_cottages') }} - {{ __('messages.perfect_getaway') }}</title>
+    <title>{{ __('messages.asara_beach_cottages') }}</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
@@ -217,7 +217,7 @@
                             <h3 class="cottage-title">{{ $cottage['name'] }}</h3>
                             <div class="cottage-price">{{ $cottage['price'] }} د.ل<span>/{{ __('messages.night') }}</span></div>
                         </div>
-                        <button onclick="openBookingModal('{{ $cottage['name'] }}', 'r{{ $cottage['id'] }}')" class="book-btn">
+                        <button onclick="openBookingModal('{{ $cottage['name'] }}', {{ $cottage['id'] }}, {{ $cottage['price'] }})" class="book-btn">
                             {{ __('messages.book_now') }}
                         </button>
                     </div>
