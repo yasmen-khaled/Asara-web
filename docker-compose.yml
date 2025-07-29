@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # Laravel Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: asara-web-app
+    ports:
+      - "8000:80"
+    volumes:
+      - ./storage:/var/www/html/storage
+      - ./bootstrap/cache:/var/www/html/bootstrap/cache
+      - ./.env:/var/www/html/.env
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_DATABASE=asara_web
+      - DB_USERNAME=asara_user
+      - DB_PASSWORD=asara_password
+    networks:
+      - asara-network
+
+  # MySQL Database
+  db:
+    image: mysql:8.0
+    container_name: asara-web-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: asara_web
+      MYSQL_USER: asara_user
+      MYSQL_PASSWORD: asara_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - asara-network
+
+  # phpMyAdmin (Optional - for database management)
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: asara-web-phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: asara_user
+      PMA_PASSWORD: asara_password
+    depends_on:
+      - db
+    networks:
+      - asara-network
+
+  # Redis (Optional - for caching and sessions)
+  redis:
+    image: redis:7-alpine
+    container_name: asara-web-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - asara-network
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  asara-network:
+    driver: bridge 

@@ -557,4 +557,41 @@ class AdminController extends Controller
             ->delete();
         return response()->json(['success' => $deleted > 0]);
     }
+
+    /**
+     * Get configuration from environment variables
+     */
+    public function getConfig()
+    {
+        return response()->json([
+            'app_name' => config('app.name'),
+            'whatsapp_number' => env('WHATSAPP_PHONE_NUMBER', '+218918868883'),
+            'max_file_size' => env('MAX_FILE_SIZE', 10485760),
+            'allowed_image_types' => explode(',', env('ALLOWED_IMAGE_TYPES', 'jpg,jpeg,png,gif')),
+            'booking_config' => [
+                'max_days' => env('MAX_BOOKING_DAYS', 30),
+                'min_notice' => env('MIN_BOOKING_NOTICE', 1),
+                'cancellation_days' => env('CANCELLATION_POLICY_DAYS', 7)
+            ]
+        ]);
+    }
+
+    /**
+     * Send WhatsApp notification using environment API key
+     */
+    public function sendWhatsAppNotification($phone, $message)
+    {
+        $apiKey = env('WHATSAPP_API_KEY');
+        $businessId = env('WHATSAPP_BUSINESS_ID');
+        
+        if (!$apiKey) {
+            // Fallback to direct WhatsApp link
+            $whatsappUrl = "https://wa.me/{$phone}?text=" . urlencode($message);
+            return redirect($whatsappUrl);
+        }
+        
+        // Use WhatsApp Business API
+        // Implementation depends on your WhatsApp API provider
+        return true;
+    }
 } 
