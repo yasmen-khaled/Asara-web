@@ -26,5 +26,7 @@ RUN composer install --no-dev --optimize-autoloader
 # تعديل صلاحيات المجلدات اللازمة للتخزين والذاكرة المؤقتة
 RUN chown -R www-data:www-data storage bootstrap/cache
 
+RUN php artisan config:cache && php artisan key:generate && apache2-foreground
+
 # تشغيل Apache في المقدمة
 CMD ["apache2-foreground"]
