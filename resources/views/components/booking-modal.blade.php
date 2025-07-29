@@ -14,13 +14,12 @@
         <div class="modal-body">
             <!-- Date Selection -->
             <div class="date-selection">
-                <div class="date-group">
-                    <label>تاريخ الوصول</label>
-                    <input type="date" id="modalCheckIn" class="date-input">
-                </div>
-                <div class="date-group">
-                    <label>تاريخ المغادرة</label>
-                    <input type="date" id="modalCheckOut" class="date-input">
+                <div class="date-group" style="width:100%">
+                    <div style="text-align: center; margin-bottom: 10px; color: #666; font-size: 0.9rem;">
+                        <i class="fas fa-info-circle" style="margin-left: 5px;"></i>
+                        اختر تاريخاً واحداً لحجز يوم واحد، أو اختر نطاقاً من التواريخ لحجز عدة أيام
+                    </div>
+                    <input type="text" id="modalCalendar" class="date-input" style="width:100%;" />
                 </div>
             </div>
 
@@ -35,6 +34,27 @@
                     <option value="6">6 ضيوف</option>
                     <option value="8">8+ ضيوف</option>
                 </select>
+            </div>
+
+            <!-- Cost Calculation Section -->
+            <div class="cost-calculation">
+                <div class="cost-header">
+                    <h4>تفاصيل التكلفة</h4>
+                </div>
+                <div class="cost-details">
+                    <div class="cost-row">
+                        <span>سعر الليلة الواحدة:</span>
+                        <span id="pricePerNight">-- د.ل</span>
+                    </div>
+                    <div class="cost-row">
+                        <span>عدد الليالي:</span>
+                        <span id="numberOfNights">--</span>
+                    </div>
+                    <div class="cost-row total-cost">
+                        <span>إجمالي التكلفة:</span>
+                        <span id="totalCost">-- د.ل</span>
+                    </div>
+                </div>
             </div>
 
             <!-- Notes -->
@@ -64,6 +84,9 @@
         </div>
     </div>
 </div>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 <style>
 /* RTL Support for Modal */
@@ -261,6 +284,63 @@
     resize: vertical;
 }
 
+/* Cost Calculation Styles */
+.cost-calculation {
+    margin-bottom: 25px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid #e9ecef;
+}
+
+.cost-header h4 {
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.cost-details {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cost-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.cost-row:last-child {
+    border-bottom: none;
+}
+
+.cost-row.total-cost {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #2c3e50;
+    border-top: 2px solid #3498db;
+    padding-top: 12px;
+    margin-top: 8px;
+}
+
+.cost-row span:first-child {
+    color: #495057;
+}
+
+.cost-row span:last-child {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.cost-row.total-cost span:last-child {
+    color: #e74c3c;
+    font-size: 1.2rem;
+}
+
 .modal-footer {
     text-align: center;
     margin-top: 20px;
@@ -434,6 +514,131 @@
     .modal-body {
         padding-bottom: 70px; /* Space for sticky button */
     }
+}
+</style>
+
+<style>
+/* Simple Flatpickr Calendar Styling - Enlarged and Centered */
+.flatpickr-calendar {
+    font-family: 'Cairo', 'Tajawal', sans-serif;
+    border-radius: 10px;
+    margin-top: 32px;
+    border: 1px solid #e0e0e0;
+    background: #fff;
+    width: 100% !important;
+    min-width: 350px;
+    max-width: 520px;
+    margin: 1 auto;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    font-size: 1.15rem;
+}
+.flatpickr-innerContainer {
+    width: 100% !important;
+    min-width: 350px;
+    max-width: 520px;
+    margin: 0 auto;
+}
+.flatpickr-days {
+    width: 100% !important;
+    min-width: 350px;
+    max-width: 520px;
+    margin: 0 auto;
+}
+.flatpickr-months, .flatpickr-weekdays {
+    width: 100% !important;
+    min-width: 350px;
+    max-width: 520px;
+  
+    margin: 0 auto;
+}
+.date-selection, .date-group {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+ 
+}
+.flatpickr-calendar {
+    margin-top: 24px !important;
+}
+#modalCalendar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    min-width: 350px;
+    max-width: 520px;
+    margin: 0 auto;
+    font-size: 1.15rem;
+}
+.flatpickr-calendar, .flatpickr-innerContainer, .flatpickr-days, .flatpickr-months, .flatpickr-weekdays {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    left: unset !important;
+    right: unset !important;
+    transform: none !important;
+    display: block;
+}
+/* Center the month and year row in flatpickr */
+.flatpickr-months {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    text-align: center !important;
+    margin-top: 10px !important;
+}
+.flatpickr-month {
+    float: none !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: auto !important;
+    margin: 0 auto !important;
+}
+.flatpickr-current-month {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: auto !important;
+    margin: 0 auto !important;
+}
+/* Highlight the selected range in the calendar */
+.flatpickr-day.inRange {
+    background: #b3e5fc !important;
+    color: #1565c0 !important;
+    border-radius: 4px !important;
+}
+.flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange {
+    background: #448eb9 !important;
+    color: #fff !important;
+    border-radius: 4px !important;
+}
+/* Hide the text input above the calendar */
+#modalCalendar {
+    opacity: 0;
+    height: 0;
+    padding: 0;
+    margin: 0;
+    border: none;
+    pointer-events: none;
+}
+.flatpickr-day.available-day,
+.flatpickr-day.blocked-day,
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange,
+.flatpickr-day.inRange {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 2.2em !important;
+  height: 2.2em !important;
+  margin: 0.1em !important;
+  font-size: 1em !important;
+  line-height: 1 !important;
+  padding: 0 !important;
 }
 </style>
 

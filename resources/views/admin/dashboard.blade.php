@@ -6,6 +6,7 @@
     <title>{{ __('dashboard.dashboard') }} - {{ __('messages.asara_beach_cottages') }}</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
         :root {
             --primary-color: #448eb9;
@@ -964,6 +965,27 @@
             width: 20px;
             text-align: center;
         }
+        
+        .logout-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 0;
+            cursor: pointer;
+            transition: 0.3s;
+            font-size: 14px;
+            text-align: right;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+            transform: translateY(-1px);
+        }
 
         /* Responsive Design */
         @media (max-width: 1024px) {
@@ -1775,6 +1797,172 @@
         [dir="ltr"] .data-table td {
             text-align: left;
         }
+
+        /* Management Sections Styling */
+        .management-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius);
+            margin-top: 15px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: var(--white);
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--text-color);
+        }
+
+        .section-header i {
+            color: var(--primary-color);
+            width: 16px;
+            text-align: center;
+        }
+
+        .blocked-dates-section .section-header i {
+            color: var(--danger-color);
+        }
+
+        .special-prices-section .section-header i {
+            color: var(--success-color);
+        }
+
+        .section-content {
+            padding: 16px;
+        }
+
+        .dates-list {
+            list-style: none;
+            margin: 0 0 12px 0;
+            padding: 0;
+            max-height: 120px;
+            overflow-y: auto;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius);
+            background: var(--white);
+        }
+
+        .dates-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-light);
+            font-size: 13px;
+            color: var(--text-color);
+        }
+
+        .dates-list li:last-child {
+            border-bottom: none;
+        }
+
+        .dates-list li:empty {
+            padding: 12px;
+            text-align: center;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .dates-list li:empty::after {
+            content: "لا توجد تواريخ محجوزة";
+        }
+
+        .special-price-list li:empty::after {
+            content: "لا توجد أسعار خاصة";
+        }
+
+        .dates-list .remove-btn {
+            background: var(--danger-color);
+            color: var(--white);
+            border: none;
+            border-radius: var(--radius-sm);
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .dates-list .remove-btn:hover {
+            background: #dc2626;
+            transform: scale(1.05);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .date-input,
+        .price-input {
+            flex: 1;
+            min-width: 120px;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            font-size: 13px;
+            background: var(--white);
+            transition: var(--transition);
+        }
+
+        .date-input:focus,
+        .price-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+        }
+
+        .price-input {
+            min-width: 100px;
+        }
+
+        .message-area {
+            margin-top: 8px;
+            padding: 8px 12px;
+            border-radius: var(--radius);
+            font-size: 12px;
+            min-height: 20px;
+            transition: var(--transition);
+        }
+
+        .message-area:empty {
+            display: none;
+        }
+
+        .message-area.success {
+            background: #ecfdf5;
+            color: var(--success-color);
+            border: 1px solid #d1fae5;
+        }
+
+        .message-area.error {
+            background: #fef2f2;
+            color: var(--danger-color);
+            border: 1px solid #fecaca;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .input-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .date-input,
+            .price-input {
+                min-width: auto;
+            }
+
+            .dates-list {
+                max-height: 100px;
+            }
+        }
     </style>
     <meta name="csrf-token" content="{{ csrf_token() }}">
 </head>
@@ -1848,6 +2036,15 @@
             <i class="fas fa-globe"></i>
             <span>{{ app()->getLocale() === 'en' ? 'العربية' : 'English' }}</span>
         </a>
+        
+        <!-- Logout Button -->
+        <form method="POST" action="{{ route('admin.logout') }}" style="margin-top: auto;">
+            @csrf
+            <button type="submit" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>تسجيل الخروج</span>
+            </button>
+        </form>
     </aside>
 
     <!-- Main Content -->
@@ -1946,6 +2143,42 @@
                                         @endif
                                         <span>{{ $cottage->name }}</span>
                                     </div>
+                                    <!-- Blocked Dates Management UI -->
+                                    <div class="management-section blocked-dates-section">
+                                        <div class="section-header">
+                                            <i class="fas fa-ban"></i>
+                                            <strong>تواريخ محجوزة/محجوبة</strong>
+                                        </div>
+                                        <div class="section-content">
+                                            <ul class="dates-list blocked-dates-list" id="blocked-dates-list-{{ $cottage->id }}"></ul>
+                                            <div class="input-group">
+                                                <input type="text" id="block-date-{{ $cottage->id }}" class="date-input" placeholder="اختر تواريخ للحجب">
+                                                <button class="btn btn-danger btn-sm" onclick="addBlockedDate({{ $cottage->id }})">
+                                                    <i class="fas fa-ban"></i>
+                                                    حجب تواريخ
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- Special Prices Management UI -->
+                                    <div class="management-section special-prices-section">
+                                        <div class="section-header">
+                                            <i class="fas fa-tag"></i>
+                                            <strong>عروض/أسعار خاصة</strong>
+                                        </div>
+                                        <div class="section-content">
+                                            <ul class="dates-list special-price-list" id="special-price-list-{{ $cottage->id }}"></ul>
+                                            <div class="input-group">
+                                                <input type="text" id="special-price-date-{{ $cottage->id }}" class="date-input" placeholder="اختر تواريخ">
+                                                <input type="number" id="special-price-value-{{ $cottage->id }}" class="price-input" min="0" placeholder="السعر الخاص (د.ل)">
+                                                <button class="btn btn-success btn-sm" onclick="addSpecialPrice({{ $cottage->id }})">
+                                                    <i class="fas fa-tag"></i>
+                                                    تعيين سعر خاص
+                                                </button>
+                                            </div>
+                                            <div id="special-price-msg-{{ $cottage->id }}" class="message-area"></div>
+                                        </div>
+                                    </div>
                                 </td>
                                 <td>{{ $cottage->price }} {{ __('dashboard.currency') }}</td>
                                 <td>
@@ -1969,6 +2202,7 @@
                                     </div>
                                 </td>
                             </tr>
+                            <tr><td colspan="4"><div id="blocked-dates-msg-{{ $cottage->id }}" class="message-area"></div></td></tr>
                             @empty
                             <tr>
                                 <td colspan="4" style="text-align: center; padding: 30px;">
@@ -2667,6 +2901,7 @@
     </nav>
 
     <script src="{{ asset('js/admin-dashboard.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
         // Modal Functions
         function openAddCottageModal() {
@@ -2959,6 +3194,19 @@
             }
         }
 
+        // Message display function
+        function showMessage(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = message;
+                element.className = `message-area ${type}`;
+                setTimeout(() => {
+                    element.textContent = '';
+                    element.className = 'message-area';
+                }, 3000);
+            }
+        }
+
         // Review deletion function
         function deleteReview(reviewId, guestName) {
             if (confirm(`هل أنت متأكد من حذف تقييم "${guestName}"؟`)) {
@@ -2984,6 +3232,205 @@
                 });
             }
         }
+
+        // Blocked Dates Management Functions
+        function fetchBlockedDates(cottageId) {
+            fetch(`/api/cottages/${cottageId}/unavailable-dates`)
+                .then(res => res.json())
+                .then(dates => {
+                    const list = document.getElementById(`blocked-dates-list-${cottageId}`);
+                    if (list) {
+                        list.innerHTML = '';
+                        if (dates.length === 0) {
+                            const li = document.createElement('li');
+                            li.innerHTML = '<span style="color: var(--text-muted); font-style: italic;">لا توجد تواريخ محجوزة</span>';
+                            list.appendChild(li);
+                        } else {
+                            dates.forEach(date => {
+                                const li = document.createElement('li');
+                                li.innerHTML = `
+                                    <span>${date}</span>
+                                    <button class="remove-btn" onclick="removeBlockedDate(${cottageId}, '${date}')">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                `;
+                                list.appendChild(li);
+                            });
+                        }
+                    }
+                });
+        }
+        function addBlockedDate(cottageId) {
+            const input = document.getElementById(`block-date-${cottageId}`);
+            const dates = input.value.split(',').map(d => d.trim()).filter(Boolean);
+            if (!dates.length) return alert('اختر تاريخاً واحداً على الأقل');
+            fetch('/api/blocked-dates', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({ cottage_id: cottageId, dates: dates })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    fetchBlockedDates(cottageId);
+                    showMessage(`blocked-dates-msg-${cottageId}`, 'تم حجب التواريخ بنجاح', 'success');
+                    input.value = '';
+                } else {
+                    showMessage(`blocked-dates-msg-${cottageId}`, 'حدث خطأ!', 'error');
+                }
+            });
+        }
+        function removeBlockedDate(cottageId, date) {
+            // Add a small delay to prevent rate limiting
+            setTimeout(() => {
+                // URL encode the date parameter to handle hyphens properly
+                const encodedDate = encodeURIComponent(date);
+                fetch(`/api/blocked-dates/${cottageId}/${encodedDate}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(res => {
+                    console.log('Response status:', res.status);
+                    if (!res.ok) {
+                        throw new Error(`HTTP error! status: ${res.status}`);
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        fetchBlockedDates(cottageId);
+                        showMessage(`blocked-dates-msg-${cottageId}`, 'تم إلغاء الحجب', 'success');
+                    } else {
+                        showMessage(`blocked-dates-msg-${cottageId}`, 'حدث خطأ!', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error removing blocked date:', error);
+                    showMessage(`blocked-dates-msg-${cottageId}`, 'حدث خطأ في الاتصال', 'error');
+                });
+            }, 100); // 100ms delay
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            @foreach($cottages ?? [] as $cottage)
+                fetchBlockedDates({{ $cottage->id }});
+                // Enable multi-date selection for blocking
+                if (window.flatpickr) {
+                    flatpickr(`#block-date-{{ $cottage->id }}`, {
+                        mode: 'multiple',
+                        minDate: 'today',
+                        dateFormat: 'Y-m-d',
+                    });
+                }
+            @endforeach
+        });
+
+        // Special Prices Management Functions
+        function fetchSpecialPrices(cottageId) {
+            fetch(`/api/cottages/${cottageId}/special-prices`)
+                .then(res => res.json())
+                .then(prices => {
+                    const list = document.getElementById(`special-price-list-${cottageId}`);
+                    if (list) {
+                        list.innerHTML = '';
+                        if (prices.length === 0) {
+                            const li = document.createElement('li');
+                            li.innerHTML = '<span style="color: var(--text-muted); font-style: italic;">لا توجد أسعار خاصة</span>';
+                            list.appendChild(li);
+                        } else {
+                            prices.forEach(item => {
+                                const li = document.createElement('li');
+                                li.innerHTML = `
+                                    <span>${item.date}: ${item.price} د.ل</span>
+                                    <button class="remove-btn" onclick="removeSpecialPrice(${cottageId}, '${item.date}')">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                `;
+                                list.appendChild(li);
+                            });
+                        }
+                    }
+                });
+        }
+        function addSpecialPrice(cottageId) {
+            const input = document.getElementById(`special-price-date-${cottageId}`);
+            const priceInput = document.getElementById(`special-price-value-${cottageId}`);
+            const dates = input.value.split(',').map(d => d.trim()).filter(Boolean);
+            const price = priceInput.value;
+            if (!dates.length || !price) return alert('اختر تواريخ وأدخل السعر الخاص');
+            fetch('/api/special-prices', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({ cottage_id: cottageId, dates: dates, price: price })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    fetchSpecialPrices(cottageId);
+                    showMessage(`special-price-msg-${cottageId}`, 'تم تعيين السعر الخاص بنجاح', 'success');
+                    input.value = '';
+                    priceInput.value = '';
+                } else {
+                    showMessage(`special-price-msg-${cottageId}`, 'حدث خطأ!', 'error');
+                }
+            });
+        }
+        function removeSpecialPrice(cottageId, date) {
+            // Add a small delay to prevent rate limiting
+            setTimeout(() => {
+                // URL encode the date parameter to handle hyphens properly
+                const encodedDate = encodeURIComponent(date);
+                fetch(`/api/special-prices/${cottageId}/${encodedDate}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(res => {
+                    console.log('Response status:', res.status);
+                    if (!res.ok) {
+                        throw new Error(`HTTP error! status: ${res.status}`);
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        fetchSpecialPrices(cottageId);
+                        showMessage(`special-price-msg-${cottageId}`, 'تم إلغاء السعر الخاص', 'success');
+                    } else {
+                        showMessage(`special-price-msg-${cottageId}`, 'حدث خطأ!', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error removing special price:', error);
+                    showMessage(`special-price-msg-${cottageId}`, 'حدث خطأ في الاتصال', 'error');
+                });
+            }, 100); // 100ms delay
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            @foreach($cottages ?? [] as $cottage)
+                fetchSpecialPrices({{ $cottage->id }});
+                // Enable multi-date selection for special prices
+                if (window.flatpickr) {
+                    flatpickr(`#special-price-date-{{ $cottage->id }}`, {
+                        mode: 'multiple',
+                        minDate: 'today',
+                        dateFormat: 'Y-m-d',
+                    });
+                }
+            @endforeach
+        });
     </script>
 </body>
 </html> 

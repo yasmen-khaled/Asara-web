@@ -1345,7 +1345,7 @@
                 <div class="booking-card">
                     <h3>احجز إقامتك الآن</h3>
                     <div class="booking-buttons">
-                        <button class="btn btn-primary" onclick="openBookingModal('{{ $cottage['name'] }}', 'r{{ $cottage['id'] }}')">
+                        <button class="btn btn-primary" onclick="openBookingModal('{{ $cottage['name'] }}', 'r{{ $cottage['id'] }}', {{ $cottage['price'] }})">
                             <i class="fas fa-calendar-alt"></i>
                             {{ __('messages.book_now') }}
                         </button>
@@ -1746,123 +1746,206 @@
         });
 
         // Booking Modal Functions
-        function openBookingModal(cottageName, cottageId) {
+        function openBookingModal(cottageName, cottageId, cottagePrice) {
             const modal = document.getElementById('bookingModal');
+            if (!modal) return;
+
             const cottageTitleElement = modal.querySelector('.cottage-name');
+            if (cottageTitleElement) {
+                cottageTitleElement.textContent = cottageName;
+            }
             
-            cottageTitleElement.textContent = cottageName;
+            // Store cottage data for later use
             modal.dataset.cottageId = cottageId;
+            modal.dataset.cottagePrice = cottagePrice || 0;
+            
+            // Update price per night display
+            const pricePerNightElement = document.getElementById('pricePerNight');
+            if (pricePerNightElement) {
+                pricePerNightElement.textContent = `${cottagePrice || 0} د.ل`;
+            }
+            
+            // Calculate initial cost
+            calculateBookingCost();
+            
+            // Show modal
             modal.style.display = 'block';
             
+            // Add close handlers
             const closeBtn = modal.querySelector('.modal-close');
             const overlay = modal.querySelector('.modal-overlay');
             
-            closeBtn.onclick = () => modal.style.display = 'none';
-            overlay.onclick = () => modal.style.display = 'none';
+            if (closeBtn) {
+                closeBtn.onclick = function() {
+                    modal.style.display = 'none';
+                }
+            }
             
+            if (overlay) {
+                overlay.onclick = function() {
+                    modal.style.display = 'none';
+                }
+            }
+            
+            // Close on escape key
             document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') modal.style.display = 'none';
+                if (e.key === 'Escape') {
+                    modal.style.display = 'none';
+                }
             });
+        }
+
+        // Calculate booking cost based on dates
+        function calculateBookingCost() {
+            const modal = document.getElementById('bookingModal');
+            if (!modal) return;
+            
+            const checkinInput = document.getElementById('modalCheckIn');
+            const checkoutInput = document.getElementById('modalCheckOut');
+            const numberOfNightsElement = document.getElementById('numberOfNights');
+            const totalCostElement = document.getElementById('totalCost');
+            
+            if (!checkinInput || !checkoutInput || !numberOfNightsElement || !totalCostElement) return;
+            
+            const checkinDate = new Date(checkinInput.value);
+            const checkoutDate = new Date(checkoutInput.value);
+            const cottagePrice = parseInt(modal.dataset.cottagePrice) || 0;
+            
+            // Calculate number of nights
+            if (checkinInput.value && checkoutInput.value && checkoutDate > checkinDate) {
+                const timeDiff = checkoutDate.getTime() - checkinDate.getTime();
+                const nights = Math.ceil(timeDiff / (1000 * 3600 * 24));
+                const totalCost = nights * cottagePrice;
+                
+                numberOfNightsElement.textContent = `${nights} ليلة`;
+                totalCostElement.textContent = `${totalCost} د.ل`;
+            } else {
+                numberOfNightsElement.textContent = '--';
+                totalCostElement.textContent = '-- د.ل';
+            }
         }
 
         function submitBooking() {
             const modal = document.getElementById('bookingModal');
-            const checkin = document.getElementById('modalCheckIn').value;
-            const checkout = document.getElementById('modalCheckOut').value;
-            const guests = document.getElementById('modalGuests').value;
-            const notes = document.getElementById('modalNotes').value;
-            const name = document.getElementById('modalName').value;
-            const phone = document.getElementById('modalPhone').value;
+            if (!modal) return;
+
+            const name = document.getElementById('modalName')?.value;
+            const phone = document.getElementById('modalPhone')?.value;
+            const checkin = document.getElementById('modalCheckIn')?.value;
+            const checkout = document.getElementById('modalCheckOut')?.value;
+            const guests = document.getElementById('modalGuests')?.value;
+            const notes = document.getElementById('modalNotes')?.value;
             
-            if (!checkin || !checkout || !name || !phone) {
-                alert('الرجاء ملء جميع الحقول المطلوبة');
+            if (!checkin || !checkout || !phone || !name) {
+                alert('الرجاء إدخال جميع البيانات المطلوبة');
                 return;
             }
             
-            // Get CSRF token
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            // Calculate number of nights
+            const checkinDate = new Date(checkin);
+            const checkoutDate = new Date(checkout);
+            const nights = Math.ceil((checkoutDate - checkinDate) / (1000 * 60 * 60 * 24));
             
-            if (!csrfToken) {
-                alert('خطأ في الأمان. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
-                return;
-            }
+            // Format dates in Arabic
+            const dateFormatter = new Intl.DateTimeFormat('ar-LY', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
             
-            // Show loading state
-            const submitBtn = modal.querySelector('.submit-booking');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإرسال...';
-            submitBtn.disabled = true;
+            const checkinFormatted = dateFormatter.format(checkinDate);
+            const checkoutFormatted = dateFormatter.format(checkoutDate);
             
-            // Send booking data to backend first
-            fetch('/bookings', {
+            // Get cottage name and price from modal
+            const cottageName = modal.querySelector('.cottage-name')?.textContent || '';
+            const cottagePrice = modal.dataset.cottagePrice || 0;
+            const totalCost = nights * cottagePrice;
+            
+            // Store booking in backend
+            fetch('/api/bookings', {
                 method: 'POST',
                 headers: {
-                    'X-CSRF-TOKEN': csrfToken,
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 },
                 body: JSON.stringify({
                     name: name,
                     phone: phone,
                     checkin: checkin,
                     checkout: checkout,
-                    guests: parseInt(guests),
+                    guests: guests,
                     notes: notes
                 })
             })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Booking saved successfully, now open WhatsApp
-                    const checkinDate = new Date(checkin);
-                    const checkoutDate = new Date(checkout);
-                    const nights = Math.ceil((checkoutDate - checkinDate) / (1000 * 60 * 60 * 24));
-                    
-                    const dateFormatter = new Intl.DateTimeFormat('ar-LY', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                    });
-                    
-                    const checkinFormatted = dateFormatter.format(checkinDate);
-                    const checkoutFormatted = dateFormatter.format(checkoutDate);
-                    const cottageName = modal.querySelector('.cottage-name').textContent;
-                    
+                    // Open WhatsApp with the message including cost details
                     const message = `السلام عليكم،
 أود حجز ${cottageName}
 
+الاسم: ${name}
+رقم الهاتف: ${phone}
 موعد الوصول: ${checkinFormatted}
 موعد المغادرة: ${checkoutFormatted}
 عدد الليالي: ${nights}
 عدد الضيوف: ${guests}
+سعر الليلة: ${cottagePrice} د.ل
+إجمالي التكلفة: ${totalCost} د.ل
 ${notes ? `ملاحظات: ${notes}` : ''}
 
-أرجو إخباري بالتوفر والأسعار.
+أرجو تأكيد حجزي.
 شكراً لكم!`;
                     
                     window.open(`https://wa.me/218918868883?text=${encodeURIComponent(message)}`, '_blank');
                     modal.style.display = 'none';
-                    alert('تم حفظ بيانات الحجز بنجاح! سيتم التواصل معكم قريباً.');
+                    
+                    // Show success message
+                    alert('تم حفظ بيانات الحجز بنجاح! سيتم فتح واتساب لإرسال الطلب.');
                 } else {
-                    alert('حدث خطأ أثناء حفظ بيانات الحجز: ' + (data.message || 'خطأ غير معروف'));
+                    alert('حدث خطأ أثناء حفظ البيانات: ' + (data.message || 'خطأ غير معروف'));
                 }
             })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('حدث خطأ أثناء حفظ بيانات الحجز. تأكد من اتصالك بالإنترنت وحاول مرة أخرى.');
-            })
-            .finally(() => {
-                // Reset button state
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-            });
+            .catch(() => alert('حدث خطأ أثناء إرسال الحجز. حاول مرة أخرى.'));
         }
+
+        // Add event listeners for date changes to recalculate cost
+        document.addEventListener('DOMContentLoaded', function() {
+            const checkinInput = document.getElementById('modalCheckIn');
+            const checkoutInput = document.getElementById('modalCheckOut');
+
+            if (checkinInput && checkoutInput) {
+                // Set minimum date to today
+                const today = new Date().toISOString().split('T')[0];
+                checkinInput.min = today;
+                checkoutInput.min = today;
+                
+                // Set default values
+                checkinInput.value = today;
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                checkoutInput.value = tomorrow.toISOString().split('T')[0];
+
+                // Update checkout minimum and recalculate cost when checkin changes
+                checkinInput.addEventListener('change', function() {
+                    const checkinDate = new Date(this.value);
+                    checkinDate.setDate(checkinDate.getDate() + 1);
+                    checkoutInput.min = checkinDate.toISOString().split('T')[0];
+                    
+                    if (checkoutInput.value && new Date(checkoutInput.value) <= new Date(this.value)) {
+                        checkoutInput.value = '';
+                    }
+                    
+                    calculateBookingCost();
+                });
+                
+                // Recalculate cost when checkout date changes
+                checkoutInput.addEventListener('change', function() {
+                    calculateBookingCost();
+                });
+            }
+        });
 
         // Reviews handling
         function submitReview(event) {

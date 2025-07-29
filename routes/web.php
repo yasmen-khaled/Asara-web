@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CottageController;
 use App\Http\Controllers\LanguageController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AuthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,35 +27,43 @@ Route::post('/reviews', [AdminController::class, 'storeReview'])->name('reviews.
 
 // Admin Routes
 Route::prefix('admin')->group(function () {
-    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
-    Route::get('/cottages', [AdminController::class, 'getCottages'])->name('admin.cottages');
-    Route::post('/cottages', [AdminController::class, 'storeCottage'])->name('admin.cottages.store');
-    Route::put('/cottages/{id}', [AdminController::class, 'updateCottage'])->name('admin.cottages.update');
-    Route::delete('/cottages/{id}', [AdminController::class, 'deleteCottage'])->name('admin.cottages.delete');
+    // Authentication routes
+    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('admin.login');
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/logout', [AuthController::class, 'logout'])->name('admin.logout');
     
-    // Gallery routes
-    Route::post('/gallery/upload', [AdminController::class, 'uploadGalleryImages'])->name('admin.gallery.upload');
-    Route::delete('/gallery/delete/{filename}', [AdminController::class, 'deleteGalleryImage'])->name('admin.gallery.delete');
-    
-    // Video routes
-    Route::post('/videos/upload', [AdminController::class, 'uploadVideo'])->name('admin.videos.upload');
-    Route::delete('/videos/delete/{filename}', [AdminController::class, 'deleteVideo'])->name('admin.videos.delete');
-    
-    // Hero image routes
-    Route::post('/hero-image/upload', [AdminController::class, 'uploadHeroImage'])->name('admin.hero-image.upload');
-    Route::delete('/hero-image/delete/{filename}', [AdminController::class, 'deleteHeroImage'])->name('admin.hero-image.delete');
-    
-    // Hero video routes
-    Route::post('/hero-video/upload', [AdminController::class, 'uploadHeroVideo'])->name('admin.hero-video.upload');
-    Route::delete('/hero-video/delete/{filename}', [AdminController::class, 'deleteHeroVideo'])->name('admin.hero-video.delete');
-    
-    // Stats route
-    Route::get('/stats', [AdminController::class, 'getStats'])->name('admin.stats');
-    
-    // Customer routes
-    Route::delete('/customers/{id}', [AdminController::class, 'deleteCustomer'])->name('admin.customers.delete');
-    // Review routes
-    Route::delete('/reviews/{id}', [AdminController::class, 'deleteReview'])->name('admin.reviews.delete');
+    // Protected admin routes
+    Route::middleware('auth:admin')->group(function () {
+        Route::get('/dashboard', [AuthController::class, 'dashboard'])->name('admin.dashboard');
+        Route::get('/cottages', [AdminController::class, 'getCottages'])->name('admin.cottages');
+        Route::post('/cottages', [AdminController::class, 'storeCottage'])->name('admin.cottages.store');
+        Route::put('/cottages/{id}', [AdminController::class, 'updateCottage'])->name('admin.cottages.update');
+        Route::delete('/cottages/{id}', [AdminController::class, 'deleteCottage'])->name('admin.cottages.delete');
+        
+        // Gallery routes
+        Route::post('/gallery/upload', [AdminController::class, 'uploadGalleryImages'])->name('admin.gallery.upload');
+        Route::delete('/gallery/delete/{filename}', [AdminController::class, 'deleteGalleryImage'])->name('admin.gallery.delete');
+        
+        // Video routes
+        Route::post('/videos/upload', [AdminController::class, 'uploadVideo'])->name('admin.videos.upload');
+        Route::delete('/videos/delete/{filename}', [AdminController::class, 'deleteVideo'])->name('admin.videos.delete');
+        
+        // Hero image routes
+        Route::post('/hero-image/upload', [AdminController::class, 'uploadHeroImage'])->name('admin.hero-image.upload');
+        Route::delete('/hero-image/delete/{filename}', [AdminController::class, 'deleteHeroImage'])->name('admin.hero-image.delete');
+        
+        // Hero video routes
+        Route::post('/hero-video/upload', [AdminController::class, 'uploadHeroVideo'])->name('admin.hero-video.upload');
+        Route::delete('/hero-video/delete/{filename}', [AdminController::class, 'deleteHeroVideo'])->name('admin.hero-video.delete');
+        
+        // Stats route
+        Route::get('/stats', [AdminController::class, 'getStats'])->name('admin.stats');
+        
+        // Customer routes
+        Route::delete('/customers/{id}', [AdminController::class, 'deleteCustomer'])->name('admin.customers.delete');
+        // Review routes
+        Route::delete('/reviews/{id}', [AdminController::class, 'deleteReview'])->name('admin.reviews.delete');
+    });
 });
 
 // API Routes (accessible from /api/ prefix)
